@@ -1,0 +1,13 @@
+streamlit
+dotenv
+langchain
+langchain-core
+langchain-community
+langchain-openai
+tavily-python
+pandas
+PyPDF2
+python-docx
+langgraph
+beautifulsoup4
+duckduckgo-search
