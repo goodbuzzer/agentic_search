@@ -11,3 +11,4 @@ python-docx
 langgraph
 beautifulsoup4
 duckduckgo-search
+plotly
