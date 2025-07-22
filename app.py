@@ -12,6 +12,7 @@ from utils import count_pdf_pages
 from PyPDF2 import PdfReader
 from docx import Document
 from datetime import datetime
+import random
 import plotly.graph_objects as go
 
 # Charger les variables d'environnement
@@ -35,7 +36,7 @@ def page_accueil():
     st.markdown("""
         <div class="main-header">
             <h1 class="main-title">MI COPILOT 🤖</h1>
-            <p class="main-subtitle">Système de Veille Intelligent</p>
+            <p class="main-subtitle">Système Multi-Agent de Veille Stratégique et d'Analyse Documentaire</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -46,9 +47,9 @@ def page_accueil():
         st.markdown("""
             <div class="feature-card">
                 <div class="feature-icon">🌐</div>
-                <div class="feature-title">Web Search Agent</div>
+                <div class="feature-title">Veille stratégique</div>
                 <div class="feature-description">
-                    Recherchez et analysez les dernières actualités provenant de sources en ligne sélectionnées avec une précision .
+                    Conversez avec notre IA avancée pour obtenir des insights personnalisés et des réponses précises à vos questions.
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -56,25 +57,26 @@ def page_accueil():
     with col2:
         st.markdown("""
             <div class="feature-card">
+                <div class="feature-icon">🕸️</div>
+                <div class="feature-title">AI Web Scrapeur</div>
+                <div class="feature-description">
+                    Recherchez, collectez et analysez les dernières actualités provenant de sources en ligne sélectionnées avec une précision .
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with col3:
+        st.markdown("""
+            <div class="feature-card">
                 <div class="feature-icon">📚</div>
-                <div class="feature-title">Internal Docs Agent</div>
+                <div class="feature-title">Documents internes</div>
                 <div class="feature-description">
                     Téléchargez et interagissez avec vos documents internes en utilisant le traitement du langage naturel avancé.
                 </div>
             </div>
         """, unsafe_allow_html=True)
     
-    with col3:
-        st.markdown("""
-            <div class="feature-card">
-                <div class="feature-icon">🧠</div>
-                <div class="feature-title">AI Chat Assistant</div>
-                <div class="feature-description">
-                    Conversez avec notre IA avancée pour obtenir des insights personnalisés et des réponses précises à vos questions.
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    
+
     # Métriques de performance
     st.markdown("### 📊 Statistiques en temps réel")
     col1, col2, col3 = st.columns(3)
@@ -111,21 +113,18 @@ def page_accueil():
 
 
     fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=folder_names,
-        y=doc_counts,
-        text=doc_counts,
-        textposition='outside',
-        marker=dict(color='skyblue', opacity=0.6)
+    fig.add_trace(go.Pie(
+        labels=folder_names,
+        values=doc_counts,
+        textinfo='label+percent',
+        hoverinfo='label+value',
+        marker=dict(colors=['skyblue', 'lightgreen', 'orange', 'pink', 'purple'])
     ))
 
     fig.update_layout(
         title='Répartition des documents par catégorie',
-        xaxis_title='Catégorie',
-        yaxis_title='Nombre de Documents',
-        xaxis=dict(tickangle=45),
         template='plotly_white',
-        height= 450
+        height=450
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -297,15 +296,27 @@ def page_docs_ai():
     
     st.markdown("""
         <div class="main-header">
-            <h2 class="main-title" style="font-size: 2.5rem;">📄 Docs AI - Analyseur Intelligent</h2>
-            <p class="main-subtitle">Téléchargez vos documents et posez vos questions</p>
+            <h2 class="main-title" style="font-size: 2.5rem;">📄 Docs AI </h2>
+            <p class="main-subtitle">Valorisation des documents</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # Zone d'upload stylée
+    # Menu de sélection des sous-dossiers
+    data_folder = "data"
+    subfolders = [f.path for f in os.scandir(data_folder) if f.is_dir()]
+    folder_names = [os.path.basename(subfolder) for subfolder in subfolders]
+    
+    st.markdown("### 📂 Sélectionnez les categories de documents pour la vectorisation")
+    selected_folders = st.multiselect(
+        "Choisissez les types de documents :",
+        folder_names,
+        help="Sélectionnez les sous-dossiers contenant les documents à vectoriser"
+    )
+
+    # Zone d'upload stylée (optionnelle)
     st.markdown("""
         <div class="upload-area">
-            <h3>📂 Zone de téléchargement</h3>
+            <h3>📂 Zone de téléchargement (optionnelle)</h3>
             <p>Glissez-déposez vos fichiers PDF ou utilisez le bouton ci-dessous</p>
         </div>
     """, unsafe_allow_html=True)
@@ -317,45 +328,59 @@ def page_docs_ai():
         help="Vous pouvez télécharger plusieurs fichiers PDF simultanément"
     )
     
-    if uploaded_files:
-        st.success(f"✅ {len(uploaded_files)} fichier(s) téléchargé(s) avec succès !")
+    if selected_folders or uploaded_files:
+        st.success(f"✅ {len(selected_folders)} sous-dossier(s) sélectionné(s) et {len(uploaded_files)} fichier(s) téléchargé(s) avec succès !")
         
-        for file in uploaded_files:
-            with st.expander(f"📄 {file.name}"):
-                st.write(f"**Taille :** {file.size / 1024:.2f} KB")
-                st.write(f"**Type :** {file.type}")
-        
-        with st.spinner("Processing PDF documents..."):
-                    all_chunks = []
-                    for uploaded_file in uploaded_files:
-                        docs = get_pdf_text(uploaded_file)  # Lire chaque PDF
-                        
-                        # Si c'est une liste de documents (plusieurs pages)
-                        if isinstance(docs, list):
-                            for doc in docs:
-                                if doc["page_content"]:
-                                    chunks = get_text_chunks(doc)
-                                    all_chunks.extend(chunks)
-                        # Si c'est un seul document
-                        elif isinstance(docs, dict) and docs["page_content"]:
-                            chunks = get_text_chunks(docs)
-                            all_chunks.extend(chunks)
+        with st.spinner("Traitement des documents..."):
+            all_chunks = []
+            
+            # Processus des sous-dossiers sélectionnés
+            for folder in selected_folders:
+                folder_path = os.path.join(data_folder, folder)
+                pdf_files = [f for f in os.listdir(folder_path) if f.endswith('.pdf')]
+                
+                # Prendre 15 fichiers aléatoires ou moins si le dossier contient moins de 15 fichiers
+                random_files = random.sample(pdf_files, min(len(pdf_files), 15))
+                
+                for pdf_file in random_files:
+                    file_path = os.path.join(folder_path, pdf_file)
+                    docs = get_pdf_text(file_path)
                     
-                    if all_chunks:
-                        st.info(f"Extracted {len(all_chunks)} text chunks from {len(uploaded_files)} documents")
-                        
-                        with st.spinner("Création des embeddings vectoriels..."):
-                            vectorstore = get_vectorstore(all_chunks)
-                            
-                            if vectorstore:
-                                conversation_chain = get_conversation_chain(vectorstore)
-                                st.session_state["conversation_chain"] = conversation_chain  # Stockage dans la session
-                                st.success(f"Document traité avec succès ! Prêt à répondre aux questions.")
-                            else:
-                                st.error("Failed to create embeddings. Please check your OpenAI API key.")
+                    if isinstance(docs, list):
+                        for doc in docs:
+                            if doc["page_content"]:
+                                chunks = get_text_chunks(doc)
+                                all_chunks.extend(chunks)
+                    elif isinstance(docs, dict) and docs["page_content"]:
+                        chunks = get_text_chunks(docs)
+                        all_chunks.extend(chunks)
+            # Processus des fichiers uploadés
+            for uploaded_file in uploaded_files:
+                docs = get_pdf_text(uploaded_file)
+                
+                if isinstance(docs, list):
+                    for doc in docs:
+                        if doc["page_content"]:
+                            chunks = get_text_chunks(doc)
+                            all_chunks.extend(chunks)
+                elif isinstance(docs, dict) and docs["page_content"]:
+                    chunks = get_text_chunks(docs)
+                    all_chunks.extend(chunks)
+            
+            if all_chunks:
+                st.info(f"Extracted {len(all_chunks)} text chunks from selected sources")
+                
+                with st.spinner("Création des embeddings vectoriels..."):
+                    vectorstore = get_vectorstore(all_chunks)
+                    
+                    if vectorstore:
+                        conversation_chain = get_conversation_chain(vectorstore)
+                        st.session_state["conversation_chain"] = conversation_chain  # Stockage dans la session
+                        st.success(f"Documents traités avec succès ! Prêt à répondre aux questions.")
                     else:
-                        st.warning("No readable content could be extracted from the uploaded documents.")
-    
+                        st.error("Failed to create embeddings. Please check your OpenAI API key.")
+            else:
+                st.warning("No readable content could be extracted from the selected sources.")
     
     if "messages" not in st.session_state:
         st.session_state["messages"] = [{"role": "assistant", "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ? 🚀"}]
@@ -389,13 +414,10 @@ def page_docs_ai():
                     st.error(error_msg)
                     st.session_state.messages.append({"role": "assistant", "content": error_msg})
         else:
-            warning_msg = "Please upload documents or fetch news first!"
+            warning_msg = "Please upload documents or select folders first!"
             st.warning(warning_msg)
-            st.session_state.messages.append({"role": "assistant", "content": warning_msg})        
+            st.session_state.messages.append({"role": "assistant", "content": warning_msg})
                 
-        
-                
-    
 
 def page_aide():
     load_css()
@@ -412,10 +434,10 @@ def page_aide():
         st.markdown("""
         ### Comment utiliser MI Copilot ?
         
-        1. **🏠 Accueil** : Vue d'ensemble des fonctionnalités
-        2. **🤖 Agent IA** : Chat intelligent avec l'IA
-        3. **🌐 Web Scraper** : Recherche et analyse web
-        4. **📄 Docs AI** : Analyse de documents PDF
+        1. **🏠 Accueil** : Vue d'ensemble des fonctionnalités et statistiques
+        2. **🤖 Agent IA** : Chat intelligent avec l'IA Web
+        3. **🌐 Web Scraper** : Recherche et Extraction des articles Web
+        4. **📄 Docs AI** : Valorisations des documents PDF
         """)
     
     with st.expander("💡 Conseils d'utilisation"):
