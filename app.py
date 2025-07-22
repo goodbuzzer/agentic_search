@@ -166,8 +166,11 @@ def page_agent():
                     st.session_state["messages"].append({"role": "assistant", "content": result})
                     st.markdown(f'<div style="padding: 0.5rem;">{result}</div>', unsafe_allow_html=True)
 
-                    # Ajouter un bouton pour télécharger la réponse dans un document Word
-                    doc = Document()
+                    # Charger le fichier Word template
+                    template_path = "template.docx"
+                    doc = Document(template_path)
+                    
+                    # Ajouter le résultat dans le fichier Word
                     doc.add_heading('Rapport de Veille Stratégique - MI Copilot', level=1)
                     doc.add_heading('Département : Veille Stratégique', level=3)
                     # Ajouter la date d'aujourd'hui
